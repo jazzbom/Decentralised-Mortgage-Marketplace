@@ -15,12 +15,9 @@ async function main() {
 
   // We get the contract to deploy
   const Neo = await ethers.getContractFactory("Ne0779");
-  const neo = await upgrades.deployProxy(Neo, ["0xE938730a87C510C52e6180779F7253abd3986415", "NEO", "NEO", "USD",
-  10, "0x03CfA08668fC63493595F4846Fb3aD1458C7C576", 1100, "FIXED", "0x03CfA08668fC63493595F4846Fb3aD1458C7C576"] );
+  const neo = await upgrades.upgradeProxy("0x2Bd70032615403fEf764EF1A06A2651ca344105a", Neo);
 
-  await neo.deployed();
-
-  console.log("Ne0779 deployed to:", neo.address);
+  console.log("Ne0779 upgraded:", neo.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

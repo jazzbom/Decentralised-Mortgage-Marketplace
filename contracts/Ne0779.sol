@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "./BNFT.sol";
 /**
 *Author Jay Bhosle
-*CreatedDate April 2021
+*CreatedDate April 2021 v1.01
 **/
 contract Ne0779 is ReentrancyGuardUpgradeable {
    
@@ -54,8 +54,9 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
     
     mapping (uint256 => address) public nftHolders;
 
-    event log(string msg, uint value, string arg);
-    event log2(string msg, uint value, address arg);
+    event log(string msg, uint256 value);
+    event logAddress(address sendersAddress, string msg, uint256 value);
+    event logUnauthorisedDepositReceived(address _address, uint256 value);
     
     struct TermSheet {
         uint256 rateOfInterest; //in decimal form i.e 50% = 0.50
@@ -171,6 +172,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
        biddersDeposit[owningBuyer] = currentDeposit + msg.value;
        contractTreasuryBalance = contractTreasuryBalance + msg.value;
        status = 1;
+       emit logAddress(msg.sender, "depositAsBidder", msg.value);
     }
     
     /**
@@ -191,7 +193,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         //expiry time
         mortgageBidExpiryTime = expirytimeInEpoch;
         uniquePostBidAccessKeyForMortgagees = uniqueKeyForMortgageesAccess; //enables access for the winning mortgagees to fund at the end of the auction.
-        
+        emit log("openForMortgageFunding with expiry", expirytimeInEpoch);
     }
     
     function fundAsMortgagee(string memory uniqueAccessKey) public payable nonReentrant {
@@ -216,7 +218,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         mortgagees.push(msg.sender);
         fundingPoolSum = fundingPoolSum + msg.value;
         contractTreasuryBalance = contractTreasuryBalance + msg.value;
-        
+        emit logAddress(msg.sender, "fundAsMortgagee", msg.value);
     }
     
     /**
@@ -229,10 +231,11 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         addrsToRemove.transfer(investmentWei);
         (bool success, ) = addrsToRemove.call{value:investmentWei}("");
         require(success, "removeMortgagee failed at transfer");
+        emit logAddress(addrsToRemove, "removeMortgagee", 0);
     } 
         
     function calculateOwnerShipPercent(uint256 valueInBaseCurrency, uint256 againstValInBaseCurrency) private pure returns (uint256) {
-        uint256 prod = valueInBaseCurrency + fixed2();
+        uint256 prod = valueInBaseCurrency * fixed2();
         return prod / againstValInBaseCurrency;
     }    
         
@@ -251,6 +254,8 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
             //temporary
             status = statusCode;
         }
+
+        emit logAddress(owner, "initializeNewState", statusCode);
     }
     
     function sold() public isOwner nonReentrant {
@@ -319,7 +324,8 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
                 (bool success, ) = seller.call{value:moneyToTransfer}("");
                 require(success, "Sold money else transfer failed.");
             }
-        
+
+            emit logAddress(owningBuyer, "Sold for:", moneyToTransferBCurrency);
     }
     
     function payToclaimOwnershipNFT() public payable nonReentrant {
@@ -329,7 +335,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         
         (bool success, ) = platformOwner.call{value:msg.value}("");
         require(success, "payToclaimOwnershipNFT failed at transfer");
-        emit log2("payToclaimOwnershipNFT", msg.value, msg.sender);
+        emit logAddress(msg.sender, "payToclaimOwnershipNFT", msg.value);
     }
     
     function mintOwnershipNFT(address receiverAddress, string memory fileHash,
@@ -338,19 +344,15 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         uint256 tokenId = nft.mintNft(receiverAddress, fileHash, metadataHash);
         nftHolders[tokenId] = receiverAddress;
         tokenIdArray.push(tokenId);
+        emit logAddress(receiverAddress, "mintOwnershipNFT", 0);
         return tokenId;
     }
     
-    function burnNFT(uint256 tokenId) public isPlatformOwner {
+    function burnOwnershipNFT(uint256 tokenId) public isPlatformOwner {
         require(nftHolders[tokenId] != address(0), "TokenId not associated with any ownership.");
         nftHolders[tokenId] = address(0);
         nft.burnNFT(tokenId);
-    }
-    
-    function burnOwnershipNFT(uint256 tokenId) private {
-        require(nftHolders[tokenId] != address(0), "TokenId not associated with any ownership.");
-        nftHolders[tokenId] = address(0);
-        nft.burnNFT(tokenId);
+        emit log("burnNFT", tokenId);
     }
     
     function repayMortgage() public payable {
@@ -360,9 +362,8 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         uint amtInBaseCurrency = latestPriceInBaseCurrency(msg.value);
         outStandingBalanceOfPayment = outStandingBalanceOfPayment - amtInBaseCurrency;
         contractTreasuryBalance = contractTreasuryBalance + msg.value;
-        
+        emit logAddress(msg.sender, "repayMortgage", msg.value);
         contractFullyPaid();
-        
     }
     
     function contractFullyPaid() private {
@@ -383,6 +384,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
             
             ownershipSize[owningBuyer] = 10000;
             //Send event to create and transfer ownership NFT to owner.
+            emit log("contractFullyPaid", outStandingBalanceOfPayment);
            
         }
     }
@@ -404,6 +406,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         require(owedAmt > 0, "No owed amount found.");
         (bool success, ) = msg.sender.call{value:owedAmt}("");
         require(success, "claimMortgageRepayment failed at transfer");
+        emit logAddress(msg.sender, "claimMortgageRepayment", owedAmt);
         return owedAmt;
     }
     
@@ -421,6 +424,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         contractTreasuryBalance = contractTreasuryBalance - transferVal;
         (bool success, ) = payable(msg.sender).call{value:transferVal}("");
         require(success, "withdrawAsMortgagee failed at transfer");
+        emit logAddress(msg.sender, "withdrawAsMortgagee", transferVal);
     }
     
     function withdrawAsBidder() public nonReentrant {
@@ -437,6 +441,7 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
         contractTreasuryBalance = contractTreasuryBalance - transferVal;
         (bool success, ) = payable(msg.sender).call{value:transferVal}("");
         require(success, "withdrawAsBidder failed at transfer");
+        emit logAddress(msg.sender, "withdrawAsBidder", transferVal);
     }
     
     /*** 
@@ -483,6 +488,10 @@ contract Ne0779 is ReentrancyGuardUpgradeable {
      */
     function maxNewFixed() public pure returns(uint256) {
         return 57896044618658097711785492504343953926634992332820282;
+    }
+    
+    receive() external payable { 
+    	emit logUnauthorisedDepositReceived(msg.sender, msg.value); 
     }
     
     /**

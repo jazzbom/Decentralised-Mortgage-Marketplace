@@ -17,6 +17,9 @@ contract BNFT is ERC721Upgradeable {
     
     mapping (address => uint256) private approvedContracts ;
 
+    event log(string msg, uint256 value);
+    event logAddress(address sendersAddress, string msg, uint256 value);
+
     function initialize() initializer public {
         __ERC721_init("BNFT", "BSNT");
         owner = msg.sender;
@@ -44,6 +47,7 @@ contract BNFT is ERC721Upgradeable {
         uint256 newNftTokenId = _tokenIds.current();
         _mint(receiver, newNftTokenId);
         tokenIdMetadataHashMap[newNftTokenId] = metadataHash;
+        emit logAddress(receiver, "mintNft", newNftTokenId);
         return newNftTokenId;
     }
     
@@ -78,11 +82,13 @@ contract BNFT is ERC721Upgradeable {
         _contractAddressIndex.increment();
         uint256 counterIndex = _contractAddressIndex.current();
         approvedContracts[contractAddress] = counterIndex;
+        emit logAddress(contractAddress, "registerApprovedContracts", counterIndex);
     }
     
     function unRegisterApprovedContracts(address contractAddress) public isOwner {
         require(approvedContracts[contractAddress] > 0, "Contract address not found.");
         approvedContracts[contractAddress] = 0;
+        emit logAddress(contractAddress, "unRegisterApprovedContracts", 0);
     }
     
      
