@@ -9,5 +9,5 @@ Process Documentation is found [here](https://drive.google.com/file/d/1zcFNGDzF3
 
 
 Video demo of the system in action (no sound): 
-https://drive.google.com/file/d/1-vfI7NVy5Q9kqxCvq0GNLRLTKnnzjXQJ/view?usp=sharing
+[here](https://drive.google.com/file/d/1-vfI7NVy5Q9kqxCvq0GNLRLTKnnzjXQJ/view?usp=sharing)
 
